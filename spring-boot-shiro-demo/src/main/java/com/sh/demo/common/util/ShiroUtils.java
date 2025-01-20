@@ -9,6 +9,8 @@ import org.apache.shiro.subject.SimplePrincipalCollection;
 import org.apache.shiro.subject.support.DefaultSubjectContext;
 import org.apache.shiro.web.mgt.DefaultWebSecurityManager;
 import org.crazycake.shiro.RedisSessionDAO;
+
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Objects;
 
@@ -61,6 +63,44 @@ public class ShiroUtils {
      * @Param  isRemoveSession 是否删除Session
      * @Return void
      */
+    public static void deleteCache(Serializable id, boolean isRemoveSession){
+        //从缓存中获取Session
+        Session session = null;
+        Collection<Session> sessions = redisSessionDAO.getActiveSessions();
+        SysUserEntity sysUserEntity;
+        Object attribute = null;
+        for(Session sessionInfo : sessions){
+            //遍历Session,找到该用户名称对应的Session
+            attribute = sessionInfo.getAttribute(DefaultSubjectContext.PRINCIPALS_SESSION_KEY);
+            Serializable id1 = sessionInfo.getId();
+            if (attribute == null) {
+                continue;
+            }
+            sysUserEntity = (SysUserEntity) ((SimplePrincipalCollection) attribute).getPrimaryPrincipal();
+            if (sysUserEntity == null) {
+                continue;
+            }
+            if (Objects.equals(id1, id)) {
+//            if (Objects.equals(sysUserEntity.getUserId(), id)) {
+//            if (Objects.equals(sysUserEntity.getUsername(), username)&&!Objects.equals(sysUserEntity.getIp(), ip)) {
+                //踢出非本机的登陆用户
+                session=sessionInfo;
+                break;
+            }
+        }
+//        attribute = session.getAttribute(DefaultSubjectContext.PRINCIPALS_SESSION_KEY);
+        if (session == null||attribute == null) {
+            return;
+        }
+        //删除session
+        if (isRemoveSession) {
+            redisSessionDAO.delete(session);
+        }
+        //删除Cache，在访问受限接口时会重新授权
+        DefaultWebSecurityManager securityManager = (DefaultWebSecurityManager) SecurityUtils.getSecurityManager();
+        Authenticator authc = securityManager.getAuthenticator();
+        ((LogoutAware) authc).onLogout((SimplePrincipalCollection) attribute);
+    }
     public static void deleteCache(String username, boolean isRemoveSession){
         //从缓存中获取Session
         Session session = null;
@@ -78,6 +118,8 @@ public class ShiroUtils {
                 continue;
             }
             if (Objects.equals(sysUserEntity.getUsername(), username)) {
+//            if (Objects.equals(sysUserEntity.getUsername(), username)&&!Objects.equals(sysUserEntity.getIp(), ip)) {
+                //踢出非本机的登陆用户
                 session=sessionInfo;
                 break;
             }

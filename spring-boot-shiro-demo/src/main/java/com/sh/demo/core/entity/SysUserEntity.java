@@ -37,4 +37,6 @@ public class SysUserEntity implements Serializable {
 	 */
 	private String state;
 
+	private String ip;
+
 }

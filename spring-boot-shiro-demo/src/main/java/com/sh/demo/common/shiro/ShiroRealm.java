@@ -1,5 +1,6 @@
 package com.sh.demo.common.shiro;
 
+import com.sh.demo.common.util.IpUtils;
 import com.sh.demo.common.util.ShiroUtils;
 import com.sh.demo.core.entity.SysMenuEntity;
 import com.sh.demo.core.entity.SysRoleEntity;
@@ -14,6 +15,8 @@ import org.apache.shiro.realm.AuthorizingRealm;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.shiro.util.ByteSource;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import javax.servlet.http.HttpServletRequest;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -90,7 +93,7 @@ public class ShiroRealm extends AuthorizingRealm {
                 getName()
         );
         //验证成功开始踢人(清除缓存和Session)
-//        ShiroUtils.deleteCache(username,true);
+//        ShiroUtils.deleteCache(username,user.getIp(),true);
         return authenticationInfo;
     }
 }

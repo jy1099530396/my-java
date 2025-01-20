@@ -1,5 +1,6 @@
 package com.sh.demo.common.config;
 
+import com.sh.demo.common.shiro.KickoutSessionFilter;
 import com.sh.demo.common.shiro.ShiroRealm;
 import com.sh.demo.common.shiro.ShiroSessionIdGenerator;
 import com.sh.demo.common.shiro.ShiroSessionManager;
@@ -18,7 +19,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
+import javax.servlet.Filter;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -58,6 +61,12 @@ public class ShiroConfig {
         return authorizationAttributeSourceAdvisor;
     }
 
+//    @Bean
+    public KickoutSessionFilter kickoutSessionFilter(){
+        KickoutSessionFilter kickoutSessionFilter = new KickoutSessionFilter();
+        return kickoutSessionFilter;
+    }
+
     /**
      * Shiro基础配置
      * @Author Sans
@@ -67,15 +76,22 @@ public class ShiroConfig {
     public ShiroFilterFactoryBean shiroFilterFactory(SecurityManager securityManager){
         ShiroFilterFactoryBean shiroFilterFactoryBean = new ShiroFilterFactoryBean();
         shiroFilterFactoryBean.setSecurityManager(securityManager);
+
+        Map<String, Filter> filters = new HashMap<>();
+        filters.put("kickout" , kickoutSessionFilter());
+        shiroFilterFactoryBean.setFilters(filters);
+
         Map<String, String> filterChainDefinitionMap = new LinkedHashMap<>();
         // 注意过滤器配置顺序不能颠倒
         // 配置过滤:不会被拦截的链接
         filterChainDefinitionMap.put("/static/**", "anon");
-        filterChainDefinitionMap.put("/userLogin/**", "anon");
+        filterChainDefinitionMap.put("/userLogin/**", "kickout,anon");
         filterChainDefinitionMap.put("/**", "authc");
         // 配置shiro默认登录界面地址，前后端分离中登录界面跳转应由前端路由控制，后台仅返回json数据
         shiroFilterFactoryBean.setLoginUrl("/userLogin/unauth");
         shiroFilterFactoryBean.setFilterChainDefinitionMap(filterChainDefinitionMap);
+
+
         return shiroFilterFactoryBean;
     }
 
@@ -140,7 +156,7 @@ public class ShiroConfig {
         JedisPoolConfig jedisPoolConfig = new JedisPoolConfig();
         jedisPoolConfig.setMaxTotal(active);
         redisManager.setJedisPoolConfig(jedisPoolConfig);
-        JedisPool jedisPool = new JedisPool(jedisPoolConfig,host);
+        JedisPool jedisPool = new JedisPool(jedisPoolConfig,host,port,timeout,password);
         redisManager.setJedisPool(jedisPool);
         return redisManager;
     }
